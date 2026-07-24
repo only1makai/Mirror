@@ -1,5 +1,7 @@
 import { type NextRequest } from "next/server";
-import { updateSession } from "@/lib/supabase/middleware";
+// Relative, not the "@/" alias: the Vercel build emits this entrypoint without
+// resolving tsconfig paths, which breaks the Edge Function bundle.
+import { updateSession } from "./lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   return await updateSession(request);
