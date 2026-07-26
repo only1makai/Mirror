@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
@@ -9,6 +9,21 @@ export default function LoginPage() {
     "idle",
   );
   const [error, setError] = useState<string | null>(null);
+
+  // Surface the error the callback route passes back via ?error=... . Without
+  // this, a failed magic link just silently lands on /login with no explanation.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const callbackError = params.get("error");
+    if (callbackError) {
+      setError(
+        callbackError === "missing_code"
+          ? "The sign-in link didn't include a valid code. It may have expired, been opened twice, or the redirect URL isn't allow-listed in Supabase."
+          : callbackError,
+      );
+      setStatus("error");
+    }
+  }, []);
 
   async function send(e: React.FormEvent) {
     e.preventDefault();
