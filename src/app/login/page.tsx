@@ -1,47 +1,50 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { sendCode, verifyCode } from "./actions";
 
 export default function LoginPage() {
+  const router = useRouter();
+  const [step, setStep] = useState<"email" | "code">("email");
   const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">(
-    "idle",
-  );
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Surface the error the callback route passes back via ?error=... . Without
-  // this, a failed magic link just silently lands on /login with no explanation.
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const callbackError = params.get("error");
-    if (callbackError) {
-      setError(
-        callbackError === "missing_code"
-          ? "The sign-in link didn't include a valid code. It may have expired, been opened twice, or the redirect URL isn't allow-listed in Supabase."
-          : callbackError,
-      );
-      setStatus("error");
-    }
-  }, []);
-
-  async function send(e: React.FormEvent) {
+  async function submitEmail(e: React.FormEvent) {
     e.preventDefault();
-    setStatus("sending");
+    setBusy(true);
     setError(null);
-    const supabase = createClient();
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-    if (error) {
-      setError(error.message);
-      setStatus("error");
-    } else {
-      setStatus("sent");
+    const { ok, error } = await sendCode(email.trim());
+    setBusy(false);
+    if (ok) setStep("code");
+    else setError(error ?? "Couldn't send the code. Try again.");
+  }
+
+  async function submitCode(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    const { ok, error } = await verifyCode(email.trim(), code.trim());
+    if (ok) {
+      // The action's response carried the session cookie; navigate so the
+      // server re-renders (and middleware re-runs) with it.
+      router.replace("/");
+      router.refresh();
+      return;
     }
+    setBusy(false);
+    setCode("");
+    setError(error ?? "That code didn't work. Request a new one.");
+  }
+
+  async function resend() {
+    setBusy(true);
+    setError(null);
+    const { ok, error } = await sendCode(email.trim());
+    setBusy(false);
+    if (!ok) setError(error ?? "Couldn't resend the code.");
   }
 
   return (
@@ -53,16 +56,8 @@ export default function LoginPage() {
           and see the change.
         </p>
 
-        {status === "sent" ? (
-          <div className="card">
-            <div className="banner ok">Check your inbox.</div>
-            <p className="muted">
-              We sent a magic link to <b>{email}</b>. Open it on this device to
-              sign in. The link expires shortly.
-            </p>
-          </div>
-        ) : (
-          <form className="card" onSubmit={send}>
+        {step === "email" ? (
+          <form className="card" onSubmit={submitEmail}>
             <div className="field">
               <label htmlFor="email">Email</label>
               <input
@@ -78,17 +73,66 @@ export default function LoginPage() {
               />
             </div>
             {error && <div className="banner danger">{error}</div>}
+            <button className="btn" type="submit" disabled={busy || !email}>
+              {busy ? <span className="spinner" /> : "Email me a code"}
+            </button>
+          </form>
+        ) : (
+          <form className="card" onSubmit={submitCode}>
+            <div className="banner ok">Check your inbox.</div>
+            <p className="muted">
+              We sent a 6-digit code to <b>{email}</b>. Enter it below — no link
+              to open, so it works on any device.
+            </p>
+            <div className="field">
+              <label htmlFor="code">6-digit code</label>
+              <input
+                id="code"
+                className="input"
+                type="text"
+                inputMode="numeric"
+                // Lets iOS Safari autofill the code straight from Mail.
+                autoComplete="one-time-code"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="123456"
+                value={code}
+                onChange={(e) =>
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                }
+                required
+              />
+            </div>
+            {error && <div className="banner danger">{error}</div>}
             <button
               className="btn"
               type="submit"
-              disabled={status === "sending" || !email}
+              disabled={busy || code.length < 6}
             >
-              {status === "sending" ? (
-                <span className="spinner" />
-              ) : (
-                "Send magic link"
-              )}
+              {busy ? <span className="spinner" /> : "Sign in"}
             </button>
+            <div className="row" style={{ marginTop: 10 }}>
+              <button
+                className="linkbtn"
+                type="button"
+                onClick={resend}
+                disabled={busy}
+              >
+                Resend code
+              </button>
+              <button
+                className="linkbtn"
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setCode("");
+                  setError(null);
+                }}
+                disabled={busy}
+              >
+                Use a different email
+              </button>
+            </div>
           </form>
         )}
         <p className="muted" style={{ marginTop: 20 }}>
