@@ -25,6 +25,11 @@ function describeAuthError(action: "send" | "verify", error: AuthError): string 
     status: error.status,
     code: error.code,
     name: error.name,
+    // Full serialization as a fallback in case there's a field the four
+    // above don't cover — AuthError's own properties are non-enumerable,
+    // so a plain console.error(error) or JSON.stringify(error) elsewhere
+    // would silently print "{}" (see the 500-handling note above).
+    raw: JSON.stringify(error, Object.getOwnPropertyNames(error)),
   });
 
   if (error.status && error.status >= 500) {
@@ -37,6 +42,15 @@ export async function sendCode(
   email: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
+
+  // TEMPORARY DEBUG LOGGING — remove once the "Token has expired or is
+  // invalid" mystery is resolved. Logged so the email actually sent to
+  // signInWithOtp can be diffed against what verifyCode later receives, to
+  // rule out a stale/mismatched email between the two calls.
+  console.log("[auth/send] params", {
+    email: JSON.stringify(email),
+    emailLength: email.length,
+  });
 
   // No emailRedirectTo: nothing is clicked, so no redirect URL is involved.
   const { error } = await supabase.auth.signInWithOtp({
@@ -54,6 +68,22 @@ export async function verifyCode(
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
 
+  // TEMPORARY DEBUG LOGGING — remove once the "Token has expired or is
+  // invalid" mystery is resolved. JSON.stringify on email/token surfaces
+  // whitespace, newlines, or other invisible characters (they show up as
+  // escape sequences instead of vanishing into the log line); charCodes
+  // pins down exactly what each character is in case something non-ASCII
+  // snuck in via copy-paste (e.g. a non-breaking space, U+00A0).
+  console.log("[auth/verify] params", {
+    email: JSON.stringify(email),
+    emailLength: email.length,
+    token: JSON.stringify(token),
+    tokenLength: token.length,
+    tokenTrimmedLength: token.trim().length,
+    tokenCharCodes: Array.from(token).map((c) => c.charCodeAt(0)),
+    type: "email",
+  });
+
   const { error } = await supabase.auth.verifyOtp({
     email,
     token,
@@ -61,5 +91,7 @@ export async function verifyCode(
   });
 
   if (error) return { ok: false, error: describeAuthError("verify", error) };
+
+  console.log("[auth/verify] success");
   return { ok: true };
 }
