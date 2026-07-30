@@ -84,11 +84,33 @@ export async function verifyCode(
     type: "email",
   });
 
-  const { error } = await supabase.auth.verifyOtp({
-    email,
-    token,
-    type: "email",
-  });
+  let { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
+
+  // TEMPORARY FALLBACK — every other explanation for otp_expired has been
+  // ruled out with hard evidence from the logging above (correct email,
+  // correct 6-digit token, no whitespace/casing issues), on an address whose
+  // first-ever OTP send only just succeeded once SMTP started working. The
+  // installed SDK's own docs say "email" covers both signup and signin, but
+  // that's a client-side contract; GoTrue is the one actually validating the
+  // token server-side, and may still be storing this account's first OTP
+  // under its legacy "signup" record type regardless of what the docs
+  // promise. A failed verifyOtp does not appear to consume the token —
+  // Supabase's own community documents "try email, then retry signup on
+  // failure" as a working pattern — so retrying with the same code is safe.
+  // Remove this once we know which type this project's GoTrue actually
+  // needs, and call that one directly instead of guessing twice.
+  if (error?.code === "otp_expired") {
+    console.log(
+      "[auth/verify] type=email failed with otp_expired, retrying type=signup",
+    );
+    const retry = await supabase.auth.verifyOtp({ email, token, type: "signup" });
+    error = retry.error;
+    console.log(
+      error
+        ? "[auth/verify] type=signup also failed — not a type mismatch"
+        : "[auth/verify] type=signup succeeded — this account needed signup, not email",
+    );
+  }
 
   if (error) return { ok: false, error: describeAuthError("verify", error) };
 
