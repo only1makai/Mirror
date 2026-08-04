@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient, createOtpSendClient } from "@/lib/supabase/server";
+import { OTP_LENGTH } from "@/lib/otp";
 import { type AuthError } from "@supabase/supabase-js";
 
 // Email OTP, not magic links. The code is typed into the app, so sign-in never
@@ -87,12 +88,33 @@ export async function verifyCode(
     type: "email",
   });
 
+  // Fail loudly on a length mismatch instead of handing GoTrue a code that was
+  // never issued. Sending the wrong length gets back a 403 otp_expired — the
+  // same error as a genuine expiry — which is exactly how the UI's truncation
+  // of this project's 8-digit codes to 6 stayed hidden for so long.
+  if (token.length !== OTP_LENGTH) {
+    console.error("[auth/verify] wrong token length", {
+      expected: OTP_LENGTH,
+      got: token.length,
+    });
+    return {
+      ok: false,
+      error: `That code is ${token.length} digits; expected ${OTP_LENGTH}.`,
+    };
+  }
+
   let { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
 
-  // TEMPORARY FALLBACK — every other explanation for otp_expired has been
-  // ruled out with hard evidence from the logging above (correct email,
-  // correct 6-digit token, no whitespace/casing issues), on an address whose
-  // first-ever OTP send only just succeeded once SMTP started working. The
+  // TEMPORARY FALLBACK — kept only until a sign-in actually succeeds end to
+  // end. Note the premise below has since been disproved twice: the real
+  // causes were the forced PKCE flow (no verifiable hash was ever stored) and
+  // then the UI truncating this project's 8-digit code to 6 — NOT a type
+  // mismatch. Delete this block once type "email" succeeds on the first try.
+  //
+  // Original reasoning, left for the record: every other explanation had been
+  // ruled out with evidence from the logging above (correct email, correct
+  // token, no whitespace/casing issues), on an address whose first-ever OTP
+  // send only just succeeded once SMTP started working. The
   // installed SDK's own docs say "email" covers both signup and signin, but
   // that's a client-side contract; GoTrue is the one actually validating the
   // token server-side, and may still be storing this account's first OTP

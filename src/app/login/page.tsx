@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { OTP_LENGTH } from "@/lib/otp";
 import { sendCode, verifyCode } from "./actions";
 
 export default function LoginPage() {
@@ -81,11 +82,11 @@ export default function LoginPage() {
           <form className="card" onSubmit={submitCode}>
             <div className="banner ok">Check your inbox.</div>
             <p className="muted">
-              We sent a 6-digit code to <b>{email}</b>. Enter it below — no link
-              to open, so it works on any device.
+              We sent a {OTP_LENGTH}-digit code to <b>{email}</b>. Enter it
+              below — no link to open, so it works on any device.
             </p>
             <div className="field">
-              <label htmlFor="code">6-digit code</label>
+              <label htmlFor="code">{OTP_LENGTH}-digit code</label>
               <input
                 id="code"
                 className="input"
@@ -94,11 +95,11 @@ export default function LoginPage() {
                 // Lets iOS Safari autofill the code straight from Mail.
                 autoComplete="one-time-code"
                 pattern="[0-9]*"
-                maxLength={6}
-                placeholder="123456"
+                maxLength={OTP_LENGTH}
+                placeholder={"1234567890".slice(0, OTP_LENGTH)}
                 value={code}
                 onChange={(e) =>
-                  setCode(e.target.value.replace(/\D/g, "").slice(0, 6))
+                  setCode(e.target.value.replace(/\D/g, "").slice(0, OTP_LENGTH))
                 }
                 required
               />
@@ -107,7 +108,7 @@ export default function LoginPage() {
             <button
               className="btn"
               type="submit"
-              disabled={busy || code.length < 6}
+              disabled={busy || code.length !== OTP_LENGTH}
             >
               {busy ? <span className="spinner" /> : "Sign in"}
             </button>
