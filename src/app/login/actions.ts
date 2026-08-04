@@ -47,15 +47,6 @@ export async function sendCode(
   // createOtpSendClient for the full explanation.
   const supabase = createOtpSendClient();
 
-  // TEMPORARY DEBUG LOGGING — remove once the "Token has expired or is
-  // invalid" mystery is resolved. Logged so the email actually sent to
-  // signInWithOtp can be diffed against what verifyCode later receives, to
-  // rule out a stale/mismatched email between the two calls.
-  console.log("[auth/send] params", {
-    email: JSON.stringify(email),
-    emailLength: email.length,
-  });
-
   // No emailRedirectTo: nothing is clicked, so no redirect URL is involved.
   const { error } = await supabase.auth.signInWithOtp({
     email,
@@ -72,22 +63,6 @@ export async function verifyCode(
 ): Promise<{ ok: boolean; error?: string }> {
   const supabase = await createClient();
 
-  // TEMPORARY DEBUG LOGGING — remove once the "Token has expired or is
-  // invalid" mystery is resolved. JSON.stringify on email/token surfaces
-  // whitespace, newlines, or other invisible characters (they show up as
-  // escape sequences instead of vanishing into the log line); charCodes
-  // pins down exactly what each character is in case something non-ASCII
-  // snuck in via copy-paste (e.g. a non-breaking space, U+00A0).
-  console.log("[auth/verify] params", {
-    email: JSON.stringify(email),
-    emailLength: email.length,
-    token: JSON.stringify(token),
-    tokenLength: token.length,
-    tokenTrimmedLength: token.trim().length,
-    tokenCharCodes: Array.from(token).map((c) => c.charCodeAt(0)),
-    type: "email",
-  });
-
   // Fail loudly on a length mismatch instead of handing GoTrue a code that was
   // never issued. Sending the wrong length gets back a 403 otp_expired — the
   // same error as a genuine expiry — which is exactly how the UI's truncation
@@ -103,42 +78,13 @@ export async function verifyCode(
     };
   }
 
-  let { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
-
-  // TEMPORARY FALLBACK — kept only until a sign-in actually succeeds end to
-  // end. Note the premise below has since been disproved twice: the real
-  // causes were the forced PKCE flow (no verifiable hash was ever stored) and
-  // then the UI truncating this project's 8-digit code to 6 — NOT a type
-  // mismatch. Delete this block once type "email" succeeds on the first try.
-  //
-  // Original reasoning, left for the record: every other explanation had been
-  // ruled out with evidence from the logging above (correct email, correct
-  // token, no whitespace/casing issues), on an address whose first-ever OTP
-  // send only just succeeded once SMTP started working. The
-  // installed SDK's own docs say "email" covers both signup and signin, but
-  // that's a client-side contract; GoTrue is the one actually validating the
-  // token server-side, and may still be storing this account's first OTP
-  // under its legacy "signup" record type regardless of what the docs
-  // promise. A failed verifyOtp does not appear to consume the token —
-  // Supabase's own community documents "try email, then retry signup on
-  // failure" as a working pattern — so retrying with the same code is safe.
-  // Remove this once we know which type this project's GoTrue actually
-  // needs, and call that one directly instead of guessing twice.
-  if (error?.code === "otp_expired") {
-    console.log(
-      "[auth/verify] type=email failed with otp_expired, retrying type=signup",
-    );
-    const retry = await supabase.auth.verifyOtp({ email, token, type: "signup" });
-    error = retry.error;
-    console.log(
-      error
-        ? "[auth/verify] type=signup also failed — not a type mismatch"
-        : "[auth/verify] type=signup succeeded — this account needed signup, not email",
-    );
-  }
+  // type "email" is correct for both new and returning accounts. An earlier
+  // "signup" retry fallback here was chasing a type mismatch that never
+  // existed — the otp_expired it was written for came from the send running
+  // under PKCE (see createOtpSendClient), not from the type.
+  const { error } = await supabase.auth.verifyOtp({ email, token, type: "email" });
 
   if (error) return { ok: false, error: describeAuthError("verify", error) };
 
-  console.log("[auth/verify] success");
   return { ok: true };
 }

@@ -1,6 +1,10 @@
-// Diagnoses the persistent otp_expired 403 by reading what GoTrue actually
-// stored, instead of inferring it from the client side (which is now fully
-// ruled out: correct email, correct 6-digit token, correct type, 19s gap).
+// Standing diagnostic for email-OTP sign-in failures: reads what GoTrue
+// actually stored, instead of inferring it from the client side.
+//
+// Reach for this whenever verifyOtp returns a 403 otp_expired. That error is
+// GoTrue's catch-all and has already hidden two unrelated bugs in this project
+// (a PKCE-flow send that stored no verifiable hash, and a UI that truncated the
+// 8-digit code to 6), so it is not, on its own, evidence that anything expired.
 //
 // GoTrue does not store the OTP. It stores sha224(email + otp) as hex, and on
 // /verify it recomputes that hash and looks up the row by it. A lookup miss and
@@ -10,7 +14,7 @@
 // to every token column on the row.
 //
 // Usage — send yourself a code, do NOT verify it, then run:
-//   DB_URL="postgresql://..." node scripts/otp-diagnose.mjs you@example.com 123456
+//   DB_URL="postgresql://..." node scripts/otp-diagnose.mjs you@example.com 49184328
 import crypto from "node:crypto";
 import pg from "pg";
 
@@ -19,7 +23,7 @@ const [email, token] = process.argv.slice(2);
 if (!url || !email || !token) {
   console.error(
     'Need DB_URL env, plus email and token args.\n' +
-      'DB_URL="postgresql://..." node scripts/otp-diagnose.mjs you@example.com 123456',
+      'DB_URL="postgresql://..." node scripts/otp-diagnose.mjs you@example.com 49184328',
   );
   process.exit(1);
 }
