@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClient, createOtpSendClient } from "@/lib/supabase/server";
 import { type AuthError } from "@supabase/supabase-js";
 
 // Email OTP, not magic links. The code is typed into the app, so sign-in never
@@ -41,7 +41,10 @@ function describeAuthError(action: "send" | "verify", error: AuthError): string 
 export async function sendCode(
   email: string,
 ): Promise<{ ok: boolean; error?: string }> {
-  const supabase = await createClient();
+  // Deliberately NOT the SSR client: that one is locked to PKCE, which makes
+  // GoTrue store a pkce_ token instead of a verifiable OTP hash. See
+  // createOtpSendClient for the full explanation.
+  const supabase = createOtpSendClient();
 
   // TEMPORARY DEBUG LOGGING — remove once the "Token has expired or is
   // invalid" mystery is resolved. Logged so the email actually sent to
