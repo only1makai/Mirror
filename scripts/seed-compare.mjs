@@ -16,7 +16,11 @@ const env = Object.fromEntries(
 );
 const URL_BASE = env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, "");
 const SVC = env.SUPABASE_SERVICE_ROLE_KEY;
-const EMAIL = process.argv[2] || "lamadrid.makai@gmail.com";
+const EMAIL = process.argv[2];
+if (!EMAIL) {
+    console.error("Usage: node scripts/seed-compare.mjs <email>");
+    process.exit(1);
+}
 const BUCKET = "photos";
 
 function crc32(buf) {
