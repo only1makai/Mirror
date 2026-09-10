@@ -55,11 +55,16 @@ export default async function HomePage() {
       <div className="container">
         <div className="topbar">
           <h1>Mirror</h1>
-          <form action="/auth/signout" method="post">
-            <button className="linkbtn" type="submit">
-              Sign out
-            </button>
-          </form>
+          <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+            <Link href="/account" className="linkbtn">
+              Account
+            </Link>
+            <form action="/auth/signout" method="post">
+              <button className="linkbtn" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
         </div>
         <p className="muted">{user?.email}</p>
 

@@ -104,6 +104,10 @@ h2 {
   border: 1px solid var(--border);
   color: var(--text);
 }
+.btn.danger {
+  background: var(--danger);
+  color: white;
+}
 
 .input,
 .textarea,
@@ -391,4 +395,32 @@ label {
   font-size: 13px;
   cursor: pointer;
   padding: 4px;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 100;
+}
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  width: 100%;
+  max-width: 400px;
+}
+.modal p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.modal .row {
+  margin-top: 16px;
 }
