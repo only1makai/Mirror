@@ -3,7 +3,7 @@
 /out
 /build
 next-env.d.ts
-.env*.local
+.env*
 .DS_Store
 *.tsbuildinfo
 .vercel
