@@ -14,7 +14,7 @@ The one part of those apps that's actually useful — looking at a photo of your
 - **Compare** — side-by-side and slider-overlay views between any two sessions, plus a timeline scrub across all your sessions for one angle.
 - **Log** — a daily entry, meant to take under 15 seconds: skin condition by zone, breakouts, routine adherence for whatever's in your product stack, sleep hours, and a free-text note.
 - **Stack** — your active products with start dates, so log data can eventually be tied back to what you were using when.
-
+- **Readings** — an optional AI-assisted pass over your three-angle capture (face shape, skin type, hair type, dimorphism traits) using Claude's vision API against a fixed reference taxonomy. Every output lands as an editable, pre-filled suggestion in the same manual-entry form you'd use anyway — nothing saves until you review and submit it, and a `face_shape_source` field records whether the final value came from the model or from your edit.
 ## What it deliberately doesn't do
 
 - No attractiveness score, rating, or percentile
@@ -23,9 +23,8 @@ The one part of those apps that's actually useful — looking at a photo of your
 
 ## Status
 
-Capture, Compare, Log, and Stack are built and running. Three things aren't built end-to-end yet:
+Capture, Compare, Log, Stack, and Readings are built and running. Two things aren't built end-to-end yet:
 
-- **Readings** — per-session classification of face shape, skin type, hair type, and dimorphism traits against fixed reference categories. The schema and reference data are live in `supabase/migrations/`; there's no UI route for it under `src/app/` yet.
 - **Correlate** — surfacing observed associations between log data and interventions (e.g. breakout trends after starting a product), gated on at least 8 weeks of data and presented as observations, not causal claims.
 - **Mirror Toy** — a symmetry visualizer, pure novelty, explicitly scoped to never grow a number.
 
