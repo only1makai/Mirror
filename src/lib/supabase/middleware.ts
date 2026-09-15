@@ -1,5 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+// Relative, not "@/": this module is pulled into the middleware bundle, which
+// is emitted without tsconfig path resolution.
+import { timeoutFetch } from "./timeout-fetch";
 
 // Refreshes the auth session on every request and gates protected routes.
 export async function updateSession(request: NextRequest) {
@@ -9,6 +12,9 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // This getUser() call sits in front of every single navigation. With no
+      // timeout, one stalled auth request blocks the whole app, not one page.
+      global: { fetch: timeoutFetch },
       cookies: {
         getAll() {
           return request.cookies.getAll();

@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { cookies } from "next/headers";
+import { timeoutFetch } from "./timeout-fetch";
 
 // Server client — bound to the request's cookies. Used in Server Components,
 // Route Handlers, and Server Actions. Auth is the signed-in user (anon key +
@@ -12,6 +13,10 @@ export async function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      // Bounded requests — see timeout-fetch.ts. Without this a slow or
+      // unresponsive Supabase stalls the server render indefinitely.
+      global: { fetch: timeoutFetch },
+
       // NOTE: you cannot make this client implicit. createServerClient sets
       // flowType: "pkce" *after* spreading options.auth, so any flowType passed
       // here is silently overwritten. That is why sending the OTP uses its own
@@ -64,6 +69,9 @@ export function createOtpSendClient() {
   return createSupabaseClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { auth: { flowType: "implicit", persistSession: false } },
+    {
+      auth: { flowType: "implicit", persistSession: false },
+      global: { fetch: timeoutFetch },
+    },
   );
 }

@@ -3,13 +3,14 @@ import { signPhotos } from "@/lib/photos";
 import { type Photo, type Session, type Angle } from "@/lib/types";
 import CaptureStudio from "./CaptureStudio";
 import TabBar from "@/components/TabBar";
+import LoadError from "@/components/LoadError";
 
 export const dynamic = "force-dynamic";
 
 export default async function CapturePage() {
   const supabase = await createClient();
 
-  const { data: last } = await supabase
+  const { data: last, error: lastError } = await supabase
     .from("sessions")
     .select("id, captured_at, lighting_score")
     .order("captured_at", { ascending: false })
@@ -27,6 +28,11 @@ export default async function CapturePage() {
 
   return (
     <div className="app-shell">
+      {lastError && (
+        <div className="container" style={{ paddingBottom: 0 }}>
+          <LoadError error={lastError} />
+        </div>
+      )}
       <CaptureStudio
         ghosts={ghosts}
         prevLighting={(last as Session | null)?.lighting_score ?? null}

@@ -184,7 +184,11 @@ export default function CaptureStudio({
       setProgress("Finishing…");
       await finalizeSession(sessionId, front ? front.luminance : null);
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      router.push("/compare");
+      // Straight into the reading form, which reads these three photos and
+      // pre-fills itself. The session and its photos are already saved by
+      // this point, so a failure over there costs the user a form to fill in
+      // by hand, never the capture they just took.
+      router.push(`/reading/${sessionId}`);
     } catch (e) {
       await discardSession(sessionId);
       setSaveError(e instanceof Error ? e.message : "Save failed");

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import TabBar from "@/components/TabBar";
+import LoadError from "@/components/LoadError";
 import { signPhotos } from "@/lib/photos";
 import { type Photo, type Session } from "@/lib/types";
 
@@ -20,7 +21,7 @@ export default async function HomePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: sessions } = await supabase
+  const { data: sessions, error: sessionsError } = await supabase
     .from("sessions")
     .select("id, user_id, captured_at, lighting_score, notes, created_at")
     .order("captured_at", { ascending: false })
@@ -67,6 +68,8 @@ export default async function HomePage() {
           </div>
         </div>
         <p className="muted">{user?.email}</p>
+
+        <LoadError error={sessionsError} />
 
         <div className="card" style={{ marginTop: 16 }}>
           <div style={{ display: "flex", gap: 14, alignItems: "center" }}>

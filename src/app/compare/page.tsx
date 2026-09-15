@@ -3,13 +3,14 @@ import { signPhotos } from "@/lib/photos";
 import { type Photo, type Angle } from "@/lib/types";
 import CompareView, { type SessionView } from "./CompareView";
 import TabBar from "@/components/TabBar";
+import LoadError from "@/components/LoadError";
 
 export const dynamic = "force-dynamic";
 
 export default async function ComparePage() {
   const supabase = await createClient();
 
-  const { data: sessions } = await supabase
+  const { data: sessions, error: sessionsError } = await supabase
     .from("sessions")
     .select("id, captured_at, photos(angle, storage_path)")
     .order("captured_at", { ascending: true });
@@ -28,6 +29,11 @@ export default async function ComparePage() {
 
   return (
     <div className="app-shell">
+      {sessionsError && (
+        <div className="container" style={{ paddingBottom: 0 }}>
+          <LoadError error={sessionsError} />
+        </div>
+      )}
       <CompareView sessions={views} />
       <TabBar />
     </div>

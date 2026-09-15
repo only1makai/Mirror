@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { type Log, type StackItem } from "@/lib/types";
 import LogForm from "./LogForm";
 import TabBar from "@/components/TabBar";
+import LoadError from "@/components/LoadError";
 
 export const dynamic = "force-dynamic";
 
@@ -9,13 +10,13 @@ export default async function LogPage() {
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
 
-  const { data: existing } = await supabase
+  const { data: existing, error: existingError } = await supabase
     .from("logs")
     .select("*")
     .eq("date", today)
     .maybeSingle();
 
-  const { data: stack } = await supabase
+  const { data: stack, error: stackError } = await supabase
     .from("stack_items")
     .select("*")
     .is("ended_at", null)
@@ -34,6 +35,11 @@ export default async function LogPage() {
 
   return (
     <div className="app-shell">
+      {(existingError || stackError) && (
+        <div className="container" style={{ paddingBottom: 0 }}>
+          <LoadError error={existingError ?? stackError} />
+        </div>
+      )}
       <LogForm
         date={today}
         existing={(existing as Log) ?? null}
