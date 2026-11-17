@@ -40,19 +40,43 @@ cd Mirror
 npm install
 ```
 
-Create `.env.local` with:
+Create `.env.local` (gitignored; never commit it). Keep comments on their own lines: the scripts' `.env.local` parser reads everything after `=` as the value.
 
 ```
+# App
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
+# Server-only. Used by the Readings vision route.
+ANTHROPIC_API_KEY=
+
+# Scripts only. Nothing under src/ reads these.
 SUPABASE_SERVICE_ROLE_KEY=
+DB_URL=
 ```
+
+| Variable | Where it's used | Exposure |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | app, scripts | Sent to the browser |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | app, scripts | Sent to the browser; every table is behind RLS |
+| `ANTHROPIC_API_KEY` | `src/lib/anthropic.ts` only | Server-only. If it's missing, Readings shows an error and the manual form still works |
+| `SUPABASE_SERVICE_ROLE_KEY` | `scripts/seed-compare.mjs`, `scripts/verify.mjs` | Scripts only. Bypasses RLS |
+| `DB_URL` | migration and `verify-*` scripts | Scripts only. Postgres connection string. These scripts read it from the shell environment, not from `.env.local`, so set it for the command you run |
 
 Then:
 
 ```bash
 npm run dev
 ```
+
+### Running a Reading locally
+
+A Reading needs `ANTHROPIC_API_KEY` in `.env.local`. Before the first one, run:
+
+```bash
+node scripts/verify-vocab.mjs
+```
+
+It checks, with the anon key, that the reference tables and ids the vision route depends on exist in the live database. It needs network access to the Supabase project. The project is on the free tier and pauses after about a week idle, so "fetch failed" on every query usually means it's paused, not broken. Then `npm run dev`, take a capture, and the app opens the Reading form for that session.
 
 Migrations live in `supabase/migrations/` and can be applied with `scripts/run-migration.mjs` (needs a `DB_URL` Postgres connection string).
 
