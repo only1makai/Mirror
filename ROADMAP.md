@@ -30,7 +30,7 @@ Last updated: 2026-11-17, against commit `0d326fa` on `main`.
 
 These protect what's shipped before anything new gets built on top.
 
-- [ ] **1.1 Fix README environment section**
+- [x] **1.1 Fix README environment section**
   - README's `.env.local` block lists all five variables from the table in `CLAUDE.md`, says which are server-only, and that `SUPABASE_SERVICE_ROLE_KEY` and `DB_URL` are only for scripts.
   - Adds a "Running a Reading locally" note: needs `ANTHROPIC_API_KEY`; run `node scripts/verify-vocab.mjs` first.
   - No other README content changes.
